@@ -345,7 +345,8 @@ app.get("*", (req, res) => {
   res.sendFile(INDEX_FILE);
 });
 
-server.listen(PORT, () => {
-  console.log(`Wool & Hornet Planning слушает http://localhost:${PORT}`);
+const HOST = process.env.HOST || "0.0.0.0";
+server.listen(PORT, HOST, () => {
+  console.log(`Wool & Hornet Planning слушает на ${HOST}:${PORT}`);
   console.log(`Отдаю файлы из: ${PUBLIC_DIR}`);
 });
