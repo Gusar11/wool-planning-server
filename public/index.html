@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wool Planning</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%B6%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0806;
+    --bg-soft:#15100c;
+    --panel: rgba(21,16,12,.86);
+    --panel-solid:#120d0a;
+    --line: rgba(183,154,235,.24);
+    --text:#fdf6ef;
+    --muted:#b7a99c;
+    --lilac:#b79aeb;
+    --pink:#f3a6c9;
+    --amber:#f5a623;
+    --ink:#1c140f;
+    --danger:#ff6a6a;
+    --shadow: 0 20px 46px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    background:var(--bg);
+    font-family:"Nunito",sans-serif;
+  }
+
+  .app-shell{position:relative;min-height:100vh;overflow:hidden}
+
+  /* --- fuzzy background blobs (evokes out-of-focus fur) --- */
+  .bg-layer{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .bg-layer--one{
+    background:
+      radial-gradient(circle at 14% 18%, rgba(183,154,235,.28), transparent 34%),
+      radial-gradient(circle at 88% 8%, rgba(243,166,201,.22), transparent 32%),
+      radial-gradient(circle at 78% 82%, rgba(245,166,35,.20), transparent 38%),
+      radial-gradient(circle at 8% 86%, rgba(183,154,235,.16), transparent 34%),
+      linear-gradient(160deg,#0a0705,#100b08,#0a0806);
+    filter:blur(2px);
+  }
+  .bg-layer--two{
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255,255,255,.025) 0 2px, transparent 2px 6px);
+    mix-blend-mode:screen;
+    opacity:.5;
+  }
+
+  .page-wrap{position:relative;z-index:1;max-width:1024px;margin:0 auto;padding:20px}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:26px;
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    position:relative;
+  }
+  /* fuzzy edge glow to suggest a soft woolen border */
+  .panel::before{
+    content:"";
+    position:absolute;
+    inset:-1px;
+    border-radius:inherit;
+    padding:1px;
+    background:linear-gradient(135deg, rgba(183,154,235,.5), rgba(245,166,35,.35), rgba(243,166,201,.4));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    opacity:.55;
+    pointer-events:none;
+  }
+
+  .hero-panel,.join-panel{margin-top:8vh;padding:34px;animation:pop .35s ease-out}
+
+  .eyebrow{
+    margin:0;
+    display:flex;align-items:center;gap:10px;
+    color:var(--amber);
+    letter-spacing:.16em;
+    font-family:"Fredoka",sans-serif;
+    font-weight:600;
+    font-size:15px;
+    text-transform:uppercase;
+  }
+  .eyebrow .yarn{font-size:20px;filter:drop-shadow(0 0 8px rgba(245,166,35,.5))}
+
+  .title{
+    margin:10px 0;
+    font-family:"Fredoka",sans-serif;
+    font-weight:700;
+    font-size:clamp(40px,7vw,66px);
+    line-height:.98;
+    background:linear-gradient(100deg,var(--lilac),var(--pink) 45%,var(--amber));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+
+  .subtitle{margin:6px 0 0;color:var(--muted);font-size:20px;font-weight:600}
+
+  .hero-form{margin-top:28px;display:grid;gap:16px}
+  .field{display:grid;gap:8px;font-weight:700;letter-spacing:.02em;font-size:15px}
+  .field input{
+    width:100%;
+    border:1px solid rgba(183,154,235,.4);
+    border-radius:18px;
+    background:#0c0906cc;
+    color:var(--text);
+    font-size:19px;
+    font-family:inherit;
+    padding:13px 16px;
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input:focus{border-color:var(--lilac);box-shadow:0 0 0 4px rgba(183,154,235,.15)}
+  .field input::placeholder{color:#7a6d63}
+
+  .team-select{display:grid;gap:8px}
+  .team-options{display:flex;gap:10px;flex-wrap:wrap}
+  .team-option{
+    display:flex;align-items:center;gap:8px;
+    border:1px solid rgba(183,154,235,.35);
+    border-radius:16px;
+    padding:10px 16px;
+    cursor:pointer;
+    font-weight:800;
+    font-size:16px;
+    background:#0c0906cc;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .team-option input{accent-color:var(--lilac);width:16px;height:16px}
+  .team-option.is-checked{border-color:var(--lilac);background:rgba(183,154,235,.12)}
+  .team-option.team-hornet.is-checked{border-color:var(--amber);background:rgba(245,166,35,.12)}
+  .team-dot{width:10px;height:10px;border-radius:50%;flex:none}
+
+  .btn{
+    border:none;
+    border-radius:18px;
+    padding:14px 18px;
+    font-family:"Fredoka",sans-serif;
+    font-weight:600;
+    font-size:20px;
+    letter-spacing:.01em;
+    cursor:pointer;
+    transition:transform .13s ease, opacity .13s ease, box-shadow .13s ease;
+  }
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn:hover:not(:disabled){transform:translateY(-2px)}
+  .btn-primary{
+    color:var(--ink);
+    background:linear-gradient(90deg,var(--pink),var(--lilac));
+    box-shadow:0 10px 24px rgba(183,154,235,.28);
+  }
+  .btn-secondary{
+    color:var(--text);
+    background:linear-gradient(90deg, rgba(183,154,235,.16), rgba(245,166,35,.16));
+    border:1px solid rgba(183,154,235,.4);
+  }
+  .btn-danger{
+    color:#fff;
+    background:linear-gradient(90deg,#ff8a5a,var(--danger));
+  }
+
+  .error-text{margin:4px 0 0;color:#ffb3b3;font-size:16px;font-weight:700}
+
+  .room-layout{display:grid;gap:16px;margin-top:22px;animation:pop .3s ease-out}
+  .room-header{padding:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .room-eyebrow{margin:0;color:var(--amber);font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase}
+  .room-home-link{color:inherit;text-decoration:none}
+  .room-title{margin:6px 0 0;font-family:"Fredoka",sans-serif;font-weight:700;font-size:clamp(26px,4vw,40px)}
+
+  .status-panel,.cards-panel,.participants-panel,.controls-panel,.results-panel{padding:20px}
+  .status-panel{display:grid;gap:6px;font-size:18px;font-weight:600}
+  .status-panel strong{color:var(--lilac)}
+  .observer-note{color:var(--amber)}
+  .voted-note{color:#9be3b0}
+
+  .cards-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .card-btn{
+    min-height:92px;
+    border:1px solid rgba(183,154,235,.35);
+    border-radius:20px;
+    background:radial-gradient(circle at 30% 25%, rgba(183,154,235,.18), rgba(9,7,5,.9) 70%);
+    color:var(--text);
+    font-size:30px;
+    font-family:"Fredoka",sans-serif;
+    font-weight:600;
+    cursor:pointer;
+    transition:transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  }
+  .card-btn:hover:not(:disabled){transform:translateY(-3px) scale(1.02);border-color:var(--lilac)}
+  .card-btn:disabled{opacity:.4;cursor:default}
+  .card-btn--active{
+    border-color:var(--amber);
+    box-shadow:0 0 0 3px rgba(245,166,35,.18), 0 0 26px rgba(245,166,35,.45);
+    background:radial-gradient(circle at 30% 25%, rgba(245,166,35,.25), rgba(9,7,5,.9) 70%);
+  }
+  .muted-label{color:var(--muted);margin:12px 0 0;font-weight:700}
+
+  /* --- card cell wraps the button so hover works even when disabled --- */
+  .card-cell{position:relative;display:flex}
+  .card-cell .card-btn{width:100%;height:100%}
+  .card-cell.has-tip{cursor:help}
+
+  /* --- global tooltip: fixed layer above every panel/stacking context --- */
+  .card-tooltip-global{
+    position:fixed;top:0;left:0;
+    z-index:9999;
+    width:max-content;max-width:260px;
+    background:var(--panel-solid);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px 12px;
+    box-shadow:var(--shadow);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .14s ease;
+  }
+  .card-tooltip-global.show{opacity:1;visibility:visible}
+  .card-tooltip-global .tt-title{
+    display:block;
+    font-family:"Nunito",sans-serif;
+    font-size:11px;font-weight:800;
+    color:var(--amber);
+    letter-spacing:.09em;text-transform:uppercase;
+    margin-bottom:7px;
+  }
+  .card-tooltip-global ul{margin:0;padding:0;list-style:none;display:grid;gap:5px}
+  .card-tooltip-global li{
+    font-family:"Nunito",sans-serif;
+    font-size:13px;font-weight:600;
+    color:var(--text);line-height:1.3;text-align:left;
+    padding-left:12px;position:relative;
+  }
+  .card-tooltip-global li::before{
+    content:"";position:absolute;left:0;top:.55em;
+    width:5px;height:5px;border-radius:50%;background:var(--lilac);
+  }
+
+  /* --- per-team status + controls --- */
+  .team-status{
+    display:inline-block;margin-left:auto;
+    font-family:"Nunito",sans-serif;font-size:13px;font-weight:800;
+    padding:4px 12px;border-radius:999px;
+    border:1px solid rgba(183,154,235,.3);background:rgba(9,7,5,.7);color:var(--muted);
+    text-transform:uppercase;letter-spacing:.05em;
+  }
+  .team-status--voting{color:var(--lilac);border-color:rgba(183,154,235,.5)}
+  .team-status--revealed{color:var(--amber);border-color:rgba(245,166,35,.5)}
+  .team-status--done{color:#9be3b0;border-color:rgba(155,227,176,.5)}
+  .team-heading{justify-content:flex-start}
+  .team-controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .btn-sm{padding:10px 15px;font-size:16px;border-radius:14px}
+  .btn-success{color:var(--ink);background:linear-gradient(90deg,#9be3b0,#4fd6a0)}
+  .commit-note{color:#9be3b0;font-weight:800;margin-top:14px;font-size:16px}
+  .await-note{color:var(--muted);font-weight:700;margin-top:14px}
+
+  .participants-panel h2,.results-panel h2{
+    margin:0 0 12px;
+    font-family:"Fredoka",sans-serif;
+    font-weight:600;
+    font-size:24px;
+  }
+  .participants-panel ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+  .participants-panel li{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    border:1px solid rgba(183,154,235,.18);
+    border-radius:16px;
+    padding:11px 14px;
+    background:rgba(9,7,5,.6);
+  }
+  .p-name{display:flex;align-items:center;gap:8px;font-weight:700}
+  .pompom{
+    width:22px;height:22px;border-radius:50%;flex:none;
+    box-shadow:inset 0 0 6px rgba(0,0,0,.4), 0 0 8px rgba(0,0,0,.25);
+  }
+
+  .result-list{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+  .result-list li{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    border:1px solid rgba(183,154,235,.28);
+    border-radius:16px;
+    padding:11px 14px;
+    background:linear-gradient(90deg, rgba(183,154,235,.08), rgba(245,166,35,.08));
+  }
+  .vote-pill{
+    min-width:58px;padding:6px 14px;border-radius:999px;text-align:center;
+    font-family:"Fredoka",sans-serif;font-weight:600;font-size:22px;
+    color:var(--ink);
+    background:linear-gradient(90deg,var(--pink),var(--amber));
+  }
+  .stats-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .stat-pill{
+    padding:5px 12px;border-radius:999px;
+    border:1px solid rgba(183,154,235,.35);
+    background:rgba(9,7,5,.8);color:var(--text);font-size:16px;font-weight:700;
+  }
+
+  .host-badge,.spectator-badge{margin-left:8px;padding:3px 8px;border-radius:8px;font-size:12px;text-transform:uppercase;font-weight:800}
+  .host-badge{color:var(--ink);background:var(--lilac)}
+  .spectator-badge{color:#ffe3c4;background:rgba(245,166,35,.25)}
+  .team-badge{margin-left:6px;padding:3px 9px;border-radius:8px;font-size:12px;font-weight:800}
+  .team-badge--wool{color:var(--ink);background:var(--lilac)}
+  .team-badge--hornet{color:var(--ink);background:var(--amber)}
+  .team-heading{
+    display:flex;align-items:center;gap:10px;
+    font-family:"Fredoka",sans-serif;font-weight:600;font-size:22px;margin:0 0 12px;
+  }
+  .team-swatch{width:14px;height:14px;border-radius:50%;flex:none}
+  .team-block + .team-block{margin-top:22px;padding-top:22px;border-top:1px solid rgba(183,154,235,.16)}
+  .not-in-team{color:var(--muted);font-weight:700;margin:12px 0 0}
+  .participant-state{display:flex;gap:10px;align-items:center;font-size:15px;font-weight:700}
+  .online{color:#9be3b0}
+  .offline{color:#ffb3b3}
+  .voted-tag{color:var(--lilac)}
+  .waiting-tag{color:var(--muted)}
+
+  .controls-panel{display:flex;justify-content:flex-start}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--panel-solid);border:1px solid var(--line);
+    padding:10px 18px;border-radius:14px;font-weight:700;
+    box-shadow:var(--shadow);z-index:5;
+    max-width:min(92vw,480px);text-align:center;white-space:normal;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  .toast.show{opacity:1}
+
+  @keyframes pop{0%{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  @media (max-width:740px){
+    .page-wrap{padding:14px}
+    .hero-panel,.join-panel{margin-top:24px;padding:22px}
+    .subtitle{font-size:18px}
+    .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .room-header{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="bg-layer bg-layer--one"></div>
+  <div class="bg-layer bg-layer--two"></div>
+  <main class="page-wrap" id="mainWrap"></main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="card-tooltip-global" id="cardTooltip" aria-hidden="true"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const CARDS = ["1","2","3","5","8","13","21","?"];
+const TEAMS = [
+  { id:"wool",   label:"Wool",   color:"var(--lilac)" },
+  { id:"hornet", label:"Hornet", color:"var(--amber)" },
+];
+const PALETTE = ["var(--pink)","var(--lilac)","var(--amber)","#8fd0c7","#f28fb0","#9fd6ff"];
+
+const socket = io();
+
+let currentRoom = null;      // персонализированный вид комнаты с сервера
+let currentRefs = null;      // общий эталон с сервера
+
+let state = {
+  screen: "home",            // home | join | room | room-missing
+  roomId: "",
+  myTeams: ["wool"],
+  draftFeature: "",
+  draftName: "",
+  error: null,
+  joinFeatureTitle: "",
+};
+
+const wrap = document.getElementById("mainWrap");
+const toastEl = document.getElementById("toast");
+
+/* -------------------- локальная идентичность (не общее состояние) -------------------- */
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function getSessionId(){
+  let id = lsGet("wool_session_id");
+  if(!id){ id = "sess_" + Math.random().toString(36).slice(2,10) + "_" + Date.now(); lsSet("wool_session_id", id); }
+  return id;
+}
+function getSavedName(){ return lsGet("wool_display_name") || ""; }
+function saveDisplayName(n){ lsSet("wool_display_name", n); }
+const sessionId = getSessionId();
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  setTimeout(()=> toastEl.classList.remove("show"), 1600);
+}
+
+function escapeAttr(s){ return (s||"").replace(/"/g,"&quot;"); }
+function escapeHtml(s){
+  return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+/* -------------------- эталон (из currentRefs) -------------------- */
+function refListFor(teamId, value){
+  return (currentRefs && currentRefs[teamId] && currentRefs[teamId][value]) || [];
+}
+function tooltipHtml(teamId, value){
+  const list = refListFor(teamId, value);
+  if(!list.length) return "";
+  const last3 = list.slice(-3);
+  const teamLabel = TEAMS.find(t => t.id === teamId).label;
+  return `<span class="tt-title">${teamLabel} · эталон · ${value} SP</span>` +
+         `<ul>${last3.map(t => `<li>${escapeHtml(t)}</li>`).join("")}</ul>`;
+}
+function showCardTooltip(cell){
+  const html = tooltipHtml(cell.dataset.team, cell.dataset.card);
+  if(!html) return;
+  const tt = document.getElementById("cardTooltip");
+  tt.innerHTML = html;
+  tt.classList.add("show");
+  const r = cell.getBoundingClientRect();
+  const w = tt.offsetWidth, h = tt.offsetHeight;
+  let left = r.left + r.width/2 - w/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  let top = r.top - h - 12;
+  if(top < 8) top = r.bottom + 12;
+  tt.style.left = left + "px";
+  tt.style.top = top + "px";
+}
+function hideCardTooltip(){
+  const tt = document.getElementById("cardTooltip");
+  if(tt) tt.classList.remove("show");
+}
+
+/* -------------------- рендер -------------------- */
+function render(){
+  if(state.screen === "home") wrap.innerHTML = renderHome();
+  else if(state.screen === "join") wrap.innerHTML = renderJoin();
+  else if(state.screen === "room-missing") wrap.innerHTML = renderRoomMissing();
+  else wrap.innerHTML = renderRoom();
+  bindEvents();
+}
+
+function teamOptionsHtml(){
+  return TEAMS.map(t => {
+    const checked = state.myTeams.includes(t.id);
+    return `
+      <label class="team-option team-${t.id} ${checked ? "is-checked":""}">
+        <input type="checkbox" class="team-checkbox" data-team="${t.id}" ${checked ? "checked":""}>
+        <span class="team-dot" style="background:${t.color}"></span>
+        ${t.label}
+      </label>
+    `;
+  }).join("");
+}
+function teamBadges(teams){
+  return teams.map(id => {
+    const t = TEAMS.find(x=>x.id===id);
+    return `<span class="team-badge team-badge--${id}">${t.label}</span>`;
+  }).join("");
+}
+
+function renderHome(){
+  return `
+    <section class="panel hero-panel">
+      <h1 class="title">Wool and Hornet planning</h1>
+      <p class="subtitle">Создай комнату, закинь ссылку команде и запускай раунд.</p>
+      <div class="hero-form" id="createForm">
+        <label class="field">
+          <span>Название фичи</span>
+          <input type="text" id="featureInput" maxlength="120" placeholder="Например: Интерактивный туториал" value="${escapeAttr(state.draftFeature)}">
+        </label>
+        <label class="field">
+          <span>Как вас зовут</span>
+          <input type="text" id="nameInput" maxlength="40" placeholder="Например: Олег" value="${escapeAttr(state.draftName)}">
+        </label>
+        <div class="team-select field">
+          <span>Ваша команда</span>
+          <div class="team-options">${teamOptionsHtml()}</div>
+        </div>
+        <button class="btn btn-primary" type="button" id="createBtn">Создать комнату</button>
+        ${state.error ? `<p class="error-text">${state.error}</p>` : ""}
+      </div>
+    </section>
+  `;
+}
+
+function renderJoin(){
+  return `
+    <section class="panel join-panel">
+      <p class="eyebrow">КОМНАТА ${state.roomId}</p>
+      <h1 class="title" style="font-size:clamp(28px,5vw,44px)">Войти в комнату</h1>
+      ${state.joinFeatureTitle ? `<p class="subtitle">${escapeHtml(state.joinFeatureTitle)}</p>` : ""}
+      <div class="hero-form" id="joinForm">
+        <label class="field">
+          <span>Как вас зовут</span>
+          <input type="text" id="nameInput" maxlength="40" placeholder="Например: Алекс" value="${escapeAttr(state.draftName)}">
+        </label>
+        <div class="team-select field">
+          <span>Ваша команда</span>
+          <div class="team-options">${teamOptionsHtml()}</div>
+        </div>
+        <button class="btn btn-primary" type="button" id="joinBtn">Войти</button>
+        ${state.error ? `<p class="error-text">${state.error}</p>` : ""}
+      </div>
+    </section>
+  `;
+}
+
+function renderRoomMissing(){
+  return `
+    <section class="panel hero-panel">
+      <h1 class="title" style="font-size:clamp(28px,5vw,44px)">Комната не найдена</h1>
+      <p class="subtitle">Комната ${state.roomId} не существует или уже закрыта.</p>
+      <button class="btn btn-primary" type="button" id="backHomeBtn">На главную</button>
+    </section>
+  `;
+}
+
+function renderRoom(){
+  const room = currentRoom;
+  if(!room) return `<section class="panel hero-panel"><p class="subtitle">Загрузка…</p></section>`;
+  const meObj = room._me;
+  if(!meObj) return `<section class="panel hero-panel"><p class="subtitle">Загрузка…</p></section>`;
+
+  const all = room.participants;
+  const STATUS_LABELS = { waiting:"ожидание", voting:"голосование", revealed:"раскрыто", done:"в эталоне" };
+
+  const teamBlocks = TEAMS.map(team => {
+    const ts = room.teamState[team.id];
+    const teamMembers = all.filter(p => p.teams.includes(team.id));
+    const votedCount = teamMembers.filter(p => p.voted[team.id]).length;
+    const iAmMember = meObj.teams.includes(team.id);
+    const myVote = meObj.votes[team.id];
+    const canVoteNow = ts.phase === "voting" && iAmMember;
+
+    const progressLine = ts.phase === "voting"
+      ? `<p class="muted-label">Проголосовало: <strong>${votedCount} / ${teamMembers.length}</strong></p>`
+      : "";
+
+    const cardsHtml = CARDS.map(c => {
+      const hasTip = refListFor(team.id, c).length > 0;
+      return `
+      <div class="card-cell ${hasTip ? "has-tip":""}" data-team="${team.id}" data-card="${c}">
+        <button class="card-btn ${myVote===c && ts.phase==="voting" ? "card-btn--active":""}"
+          type="button" data-card="${c}" data-team="${team.id}"
+          ${!canVoteNow ? "disabled":""}><span class="card-face">${c}</span></button>
+      </div>`;
+    }).join("");
+
+    let resultsHtml = "";
+    if(ts.phase === "revealed" || ts.phase === "done"){
+      const revealedList = teamMembers.map(p => `
+        <li>
+          <div>
+            <strong>${escapeHtml(p.name)}</strong>
+            ${p.isHost ? `<span class="host-badge">организатор</span>` : ""}
+          </div>
+          <span class="vote-pill">${p.votes[team.id] || "-"}</span>
+        </li>
+      `).join("");
+      const tally = {};
+      teamMembers.forEach(p => { const v = p.votes[team.id]; if(v){ tally[v] = (tally[v]||0)+1; } });
+      const statsHtml = Object.entries(tally).map(([card,count]) =>
+        `<span class="stat-pill">${card} × ${count}</span>`).join("");
+      resultsHtml = `
+        <ul class="result-list">${revealedList}</ul>
+        ${statsHtml ? `<div class="stats-row">${statsHtml}</div>` : ""}
+      `;
+    }
+
+    let controls = "";
+    if(ts.phase === "waiting"){
+      controls = meObj.isHost
+        ? `<div class="team-controls"><button class="btn btn-primary btn-sm js-start" data-team="${team.id}" type="button">Начать голосование</button></div>`
+        : `<p class="await-note">Ожидание старта от организатора.</p>`;
+    } else if(ts.phase === "voting"){
+      if(!meObj.isHost) controls = `<p class="await-note">Идет голосование…</p>`;
+    } else if(ts.phase === "revealed"){
+      if(meObj.isHost){
+        const consensus = ts.consensus;
+        const finishBtn = consensus
+          ? `<button class="btn btn-success btn-sm js-finish" data-team="${team.id}" type="button">Завершить и внести как ${consensus} SP</button>`
+          : `<button class="btn btn-success btn-sm" type="button" disabled>Нет числовой оценки</button>`;
+        controls = `<div class="team-controls">
+          <button class="btn btn-danger btn-sm js-restart" data-team="${team.id}" type="button">Оценить заново</button>
+          ${finishBtn}
+        </div>`;
+      }
+    } else if(ts.phase === "done"){
+      controls = `<p class="commit-note">✓ Фича внесена в эталон как ${ts.committedValue} SP</p>`;
+      if(meObj.isHost){
+        controls += `<div class="team-controls"><button class="btn btn-secondary btn-sm js-newround" data-team="${team.id}" type="button">Новый раунд</button></div>`;
+      }
+    }
+
+    return `
+      <div class="team-block">
+        <h2 class="team-heading">
+          <span class="team-swatch" style="background:${team.color}"></span>${team.label}
+          <span class="team-status team-status--${ts.phase}">${STATUS_LABELS[ts.phase]}${ts.round>1 && ts.phase!=="waiting" ? " · раунд "+ts.round : ""}</span>
+        </h2>
+        ${progressLine}
+        <div class="cards-grid">${cardsHtml}</div>
+        ${!iAmMember ? `<p class="not-in-team">Вы не в этой команде — голос недоступен.</p>` : ""}
+        ${(ts.phase==="revealed" || ts.phase==="done") ? resultsHtml : ""}
+        ${controls}
+      </div>
+    `;
+  }).join("");
+
+  const participantsHtml = all.map((p,i) => `
+    <li>
+      <div class="p-name">
+        <span class="pompom" style="background:${PALETTE[i % PALETTE.length]}"></span>
+        ${escapeHtml(p.name)}
+        ${p.isHost ? `<span class="host-badge">организатор</span>` : ""}
+        ${teamBadges(p.teams)}
+      </div>
+      <div class="participant-state">
+        <span class="${p.isOnline ? "online":"offline"}">${p.isOnline ? "онлайн":"офлайн"}</span>
+      </div>
+    </li>
+  `).join("");
+
+  return `
+    <section class="room-layout">
+      <header class="panel room-header">
+        <div>
+          <a href="#/" class="room-home-link" id="homeLink">
+            <p class="room-eyebrow">Комната · ${room.id}</p>
+          </a>
+          <h1 class="room-title">${escapeHtml(room.featureTitle)}</h1>
+        </div>
+        <div>
+          <button class="btn btn-secondary" type="button" id="copyBtn">Копировать ссылку</button>
+        </div>
+      </header>
+
+      <section class="panel cards-panel">
+        ${teamBlocks}
+      </section>
+
+      <section class="panel participants-panel">
+        <h2>Участники</h2>
+        <ul>${participantsHtml}</ul>
+      </section>
+    </section>
+  `;
+}
+
+/* -------------------- действия -------------------- */
+function handleCreateRoom(){
+  const feature = (document.getElementById("featureInput")||{}).value?.trim() || "";
+  const name = (document.getElementById("nameInput")||{}).value?.trim() || "";
+  state.draftFeature = feature;
+  state.draftName = name;
+  if(!feature){ state.error = "Введите название фичи."; render(); return; }
+  if(!name){ state.error = "Введите ваше имя."; render(); return; }
+  if(!state.myTeams.length){ state.error = "Выберите хотя бы одну команду."; render(); return; }
+  state.error = null;
+  saveDisplayName(name);
+  socket.emit("room:create", { featureTitle:feature, name, sessionId, teams:[...state.myTeams] }, (res) => {
+    if(res && res.id){
+      state.roomId = res.id;
+      state.screen = "room";
+      setHash(`#/room/${res.id}`);
+    } else if(res && res.error){
+      state.error = res.error; render();
+    }
+  });
+}
+
+function handleJoinRoom(){
+  const name = (document.getElementById("nameInput")||{}).value?.trim() || "";
+  state.draftName = name;
+  if(!name){ state.error = "Введите имя, чтобы войти в комнату."; render(); return; }
+  if(!state.myTeams.length){ state.error = "Выберите хотя бы одну команду."; render(); return; }
+  saveDisplayName(name);
+  socket.emit("room:join", { roomId:state.roomId, sessionId, name, teams:[...state.myTeams] }, (res) => {
+    if(res && res.error === "missing"){ state.screen = "room-missing"; render(); return; }
+    if(res && res.error){ state.error = res.error; render(); return; }
+    state.error = null;
+    state.screen = "room"; // финальное состояние придёт через sync
+  });
+}
+
+function bindEvents(){
+  const createBtn = document.getElementById("createBtn");
+  if(createBtn) createBtn.addEventListener("click", handleCreateRoom);
+
+  const joinBtn = document.getElementById("joinBtn");
+  if(joinBtn) joinBtn.addEventListener("click", handleJoinRoom);
+
+  const backHomeBtn = document.getElementById("backHomeBtn");
+  if(backHomeBtn) backHomeBtn.addEventListener("click", () => { setHash("#/"); });
+
+  ["featureInput","nameInput"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("keydown", e => {
+      if(e.key !== "Enter") return;
+      if(state.screen === "home") handleCreateRoom();
+      else if(state.screen === "join") handleJoinRoom();
+    });
+  });
+
+  document.querySelectorAll(".team-checkbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const teamId = cb.dataset.team;
+      if(cb.checked){ if(!state.myTeams.includes(teamId)) state.myTeams.push(teamId); }
+      else { state.myTeams = state.myTeams.filter(t => t !== teamId); }
+      const label = cb.closest(".team-option");
+      if(label) label.classList.toggle("is-checked", cb.checked);
+      if(state.error && state.error.indexOf("команд") !== -1 && state.myTeams.length){
+        state.error = null;
+        const errEl = wrap.querySelector(".error-text");
+        if(errEl) errEl.remove();
+      }
+    });
+  });
+
+  const homeLink = document.getElementById("homeLink");
+  if(homeLink) homeLink.addEventListener("click", e => { e.preventDefault(); setHash("#/"); });
+
+  const copyBtn = document.getElementById("copyBtn");
+  if(copyBtn) copyBtn.addEventListener("click", async () => {
+    const link = `${location.origin}${location.pathname}#/room/${state.roomId}`;
+    try{ await navigator.clipboard.writeText(link); }catch(e){}
+    toast("Ссылка скопирована");
+  });
+
+  document.querySelectorAll(".js-start").forEach(btn =>
+    btn.addEventListener("click", () => socket.emit("team:start", { roomId:state.roomId, sessionId, teamId:btn.dataset.team })));
+  document.querySelectorAll(".js-restart").forEach(btn =>
+    btn.addEventListener("click", () => socket.emit("team:restart", { roomId:state.roomId, sessionId, teamId:btn.dataset.team })));
+  document.querySelectorAll(".js-newround").forEach(btn =>
+    btn.addEventListener("click", () => socket.emit("team:newround", { roomId:state.roomId, sessionId, teamId:btn.dataset.team })));
+  document.querySelectorAll(".js-finish").forEach(btn =>
+    btn.addEventListener("click", () => {
+      const teamId = btn.dataset.team;
+      socket.emit("team:finish", { roomId:state.roomId, sessionId, teamId }, (res) => {
+        if(res && res.error === "no-consensus") toast("Нет числовой оценки для внесения в эталон.");
+        else if(res && res.ok){
+          const label = TEAMS.find(t=>t.id===teamId).label;
+          toast(`Фича внесена в эталон ${label} как ${res.value} SP`);
+        }
+      });
+    }));
+
+  document.querySelectorAll(".card-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const teamId = btn.dataset.team;
+      socket.emit("vote:submit", { roomId:state.roomId, sessionId, teamId, card:btn.dataset.card });
+    });
+  });
+
+  document.querySelectorAll(".card-cell.has-tip").forEach(cell => {
+    cell.addEventListener("mouseenter", () => showCardTooltip(cell));
+    cell.addEventListener("mouseleave", hideCardTooltip);
+  });
+}
+
+/* -------------------- сокеты -------------------- */
+socket.on("sync", ({ room, references }) => {
+  currentRefs = references;
+  if(room && room.id === state.roomId){
+    // отметим "меня" по sessionId нельзя (view не содержит sessionId), поэтому
+    // сервер уже прислал только безопасные данные; определяем "меня" по имени+хосту невозможно —
+    // используем отдельное поле: сервер помечает наш вид, но проще — найти по признаку.
+    // Мы храним своё имя локально; однако надёжнее пометить на сервере. Здесь сопоставим по voted/own votes:
+    room._me = pickMe(room);
+    currentRoom = room;
+    if(state.screen !== "room"){ state.screen = "room"; }
+    render();
+  }
+});
+
+/* Определяем запись "меня": сервер раскрывает наши собственные голоса всегда,
+   но для надёжного совпадения используем имя из локального хранилища + флаг хоста.
+   Чтобы не зависеть от имени, сервер помечает наш объект полем isMe. */
+function pickMe(room){
+  // сервер добавляет isMe в персонализированном виде (см. ниже клиентский запрос),
+  // но на случай отсутствия — фолбэк по сохранённому имени.
+  const byFlag = room.participants.find(p => p.isMe);
+  if(byFlag) return byFlag;
+  const myName = getSavedName();
+  return room.participants.find(p => p.name === myName) || null;
+}
+
+function enterRoom(id){
+  state.roomId = id;
+  socket.emit("room:enter", { roomId:id, sessionId }, (res) => {
+    if(!res || !res.exists){ state.screen = "room-missing"; render(); return; }
+    if(res.isParticipant){
+      state.screen = "room"; // подробное состояние придёт через sync
+      render();
+    } else {
+      state.myTeams = ["wool"];
+      state.draftName = getSavedName();
+      state.joinFeatureTitle = res.featureTitle || "";
+      state.error = null;
+      state.screen = "join";
+      render();
+    }
+  });
+}
+
+socket.on("connect", () => {
+  if(state.screen === "room" && state.roomId) enterRoom(state.roomId);
+});
+
+/* -------------------- роутинг -------------------- */
+let suppressHashRoute = false;
+function setHash(hash){
+  try{ history.replaceState(null, "", hash); route(); return; }catch(e){}
+  try{ suppressHashRoute = true; location.hash = hash; setTimeout(()=>{ suppressHashRoute=false; route(); },0); }
+  catch(e){ suppressHashRoute = false; }
+}
+function route(){
+  const m = location.hash.match(/^#\/room\/([A-Za-z0-9]+)/i);
+  if(!m){ state.screen = "home"; state.error = null; render(); return; }
+  const id = m[1].toUpperCase();
+  enterRoom(id);
+}
+
+window.addEventListener("hashchange", () => { if(!suppressHashRoute) route(); });
+window.addEventListener("scroll", hideCardTooltip, true);
+window.addEventListener("resize", hideCardTooltip);
+
+route();
+</script>
+</body>
+</html>
