@@ -340,11 +340,27 @@
   @keyframes pop{0%{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
   @media (max-width:740px){
-    .page-wrap{padding:14px}
-    .hero-panel,.join-panel{margin-top:24px;padding:22px}
-    .subtitle{font-size:18px}
-    .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .room-header{flex-direction:column}
+    .page-wrap{padding:12px}
+    .hero-panel,.join-panel{margin-top:20px;padding:20px}
+    .title{font-size:clamp(30px,8vw,44px)}
+    .subtitle{font-size:17px}
+    .cards-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .card-btn{min-height:66px;font-size:24px;border-radius:16px}
+    .room-header{flex-direction:column;padding:16px}
+    .room-header > div:last-child{width:100%}
+    .status-panel,.cards-panel,.participants-panel,.controls-panel,.results-panel{padding:14px}
+    .room-title{font-size:clamp(22px,6vw,32px)}
+    .team-heading{font-size:20px;flex-wrap:wrap;row-gap:6px}
+    .team-status{margin-left:0}
+    .team-controls{flex-direction:column}
+    .team-controls .btn{width:100%;white-space:normal}
+    #copyBtn{width:100%}
+    .btn{font-size:18px}
+    .participants-panel li{flex-wrap:wrap;row-gap:4px}
+    .card-tooltip-global{max-width:min(88vw,260px)}
+  }
+  @media (max-width:420px){
+    .cards-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   }
 </style>
 </head>
@@ -730,11 +746,7 @@ function bindEvents(){
   if(homeLink) homeLink.addEventListener("click", e => { e.preventDefault(); setHash("#/"); });
 
   const copyBtn = document.getElementById("copyBtn");
-  if(copyBtn) copyBtn.addEventListener("click", async () => {
-    const link = `${location.origin}${location.pathname}#/room/${state.roomId}`;
-    try{ await navigator.clipboard.writeText(link); }catch(e){}
-    toast("Ссылка скопирована");
-  });
+  if(copyBtn) copyBtn.addEventListener("click", () => copyRoomLink());
 
   document.querySelectorAll(".js-start").forEach(btn =>
     btn.addEventListener("click", () => socket.emit("team:start", { roomId:state.roomId, sessionId, teamId:btn.dataset.team })));
@@ -761,10 +773,55 @@ function bindEvents(){
     });
   });
 
+  // tooltip: hover on desktop, tap on touch devices
   document.querySelectorAll(".card-cell.has-tip").forEach(cell => {
     cell.addEventListener("mouseenter", () => showCardTooltip(cell));
     cell.addEventListener("mouseleave", hideCardTooltip);
+    cell.addEventListener("click", () => {
+      // на тач-устройствах показываем эталон по тапу и авто-прячем
+      if(window.matchMedia && window.matchMedia("(hover: none)").matches){
+        showCardTooltip(cell);
+        clearTimeout(window.__ttTimer);
+        window.__ttTimer = setTimeout(hideCardTooltip, 3500);
+      }
+    });
   });
+}
+
+function roomLink(){
+  return `${location.origin}/#/room/${state.roomId}`;
+}
+
+async function copyRoomLink(){
+  const link = roomLink();
+  let ok = false;
+  // 1) современный способ — работает только в защищённом контексте (https)
+  if(navigator.clipboard && window.isSecureContext){
+    try{ await navigator.clipboard.writeText(link); ok = true; }catch(e){ ok = false; }
+  }
+  // 2) запасной способ — работает и по обычному http
+  if(!ok){
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = link;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, link.length);
+      ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+    }catch(e){ ok = false; }
+  }
+  if(ok){
+    toast("Ссылка скопирована");
+  } else {
+    // 3) последний резерв — показать ссылку, чтобы скопировать вручную
+    window.prompt("Скопируйте ссылку вручную:", link);
+  }
 }
 
 /* -------------------- сокеты -------------------- */
